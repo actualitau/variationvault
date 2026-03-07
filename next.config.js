@@ -8,6 +8,7 @@ const withPWA = require('next-pwa')({
 
 module.exports = withPWA({
   reactStrictMode: true,
+  output: 'standalone', // Required for Docker deployment
   images: {
     domains: ['localhost'],
   },
@@ -17,5 +18,27 @@ module.exports = withPWA({
       use: 'raw-loader'
     });
     return config;
-  }
+  },
+  // Security headers
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options', 
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+        ],
+      },
+    ];
+  },
 });
