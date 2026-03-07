@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply text-gray-900 bg-gray-50;
+  }
+
+  /* Touch targets should be at least 44px */
+  button,
+  input,
+  select,
+  textarea,
+  a {
+    min-height: 44px;
+    @apply flex items-center;
+  }
+
+  /* Better focus states for accessibility */
+  button:focus,
+  input:focus,
+  select:focus,
+  textarea:focus,
+  a:focus {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+}
+
+/* Component styles */
+@layer components {
+  /* Primary button style */
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed;
+  }
+
+  /* Secondary button style */
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-6 rounded-lg transition-colors;
+  }
+
+  /* Form input style */
+  .form-input {
+    @apply w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+
+  /* Card style */
+  .card {
+    @apply bg-white rounded-lg p-4 shadow hover:shadow-md transition-shadow;
+  }
+
+  /* Status badges */
+  .status-pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .status-approved {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .status-rejected {
+    @apply bg-red-100 text-red-800;
+  }
+}
+
+/* Utility styles */
+@layer utilities {
+  /* Safe area insets for mobile devices */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Touch-friendly scrolling */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  .no-zoom {
+    font-size: 16px;
+  }
+
+  /* Hide scrollbars while maintaining functionality */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  /* Optimize tap targets */
+  button,
+  a,
+  input,
+  select {
+    min-height: 44px;
+  }
+
+  /* Optimize text inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Optimize modals and overlays */
+  .modal {
+    @apply fixed inset-0 z-50;
+  }
+}
+
+/* Dark mode support (if needed) */
+@media (prefers-color-scheme: dark) {
+  /* Add dark mode styles here if needed */
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+}

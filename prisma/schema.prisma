@@ -1,0 +1,127 @@
+// Prisma schema for VariationVault - Australian tradie estimation app
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CHANGES_REQUESTED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Variation {
+  id              String    @id @default(cuid())
+  projectId       String
+  projectName     String
+  clientName      String
+  clientEmail     String
+  clientPhone     String
+  address         String
+  suburb          String
+  state           String
+  postcode        String
+  description     String
+  measurements    String
+  totalArea       String
+  items           String
+  totalLabor      Float
+  totalMaterials  Float
+  tax             Float
+  total           Float
+  notes           String?
+  status          String    @default("DRAFT") // DRAFT, SENT, CLIENT_REVIEW, APPROVED, REJECTED, COMPLETED
+  approvalStatus  ApprovalStatus @default(PENDING)
+  pdfUrl          String?
+  version         Int       @default(1)
+  createdBy       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  versionHistory  VariationVersion[]
+  variations      VariationVersion[]
+  
+  @@map("variations")
+}
+
+model VariationVersion {
+  id          String            @id @default(cuid())
+  variationId String
+  version     Int
+  images      String[]          @default([])
+  changes     String
+  updatedAt   DateTime          @default(now())
+  
+  @@index([variationId])
+  @@map("variation_versions")
+}
+
+model Approvals {
+  id          String             @id @default(cuid())
+  variationId String
+  clientId    String?
+  email       String
+  status      ApprovalStatus     @default(PENDING)
+  comments    String?
+  notified    Boolean            @default(false)
+  notifiedAt  DateTime?
+  ipAddr      String?
+  userAgent   String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  variation   Variation          @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  
+  @@index([variationId])
+  @@index([status])
+  @@map("approvals")
+}
+
+model Notifications {
+  id        String             @id @default(cuid())
+  variationId String
+  type      String           // EMAIL, SMS, WHATSAPP
+  status    NotificationStatus @default(PENDING)
+  recipient String
+  message   String?
+  error     String?
+  tries     Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  variation Variation      @relation(fields: [variationId], references: [id], onDelete: Cascade)
+  
+  @@map("notifications")
+}
+
+model Settings {
+  id           String  @id @default(cuid())
+  company      String
+  email        String?
+  smsProvider  String?
+  emailProvider String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("settings")
+}
+
+model Users {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      String   @default("tradies") // admin, tradie
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
