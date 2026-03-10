@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { generatePDF } from '@/lib/pdf'
-import { writeFile, ensureDir, readFile } from 'fs/promises'
-import { join, existsSync } from 'path'
+import { writeFile, mkdir, readFile } from 'fs/promises'
+import { join } from 'path'
 
 const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
 
@@ -31,11 +31,9 @@ export async function GET(request: NextRequest) {
     const pdfFilename = `${variationId}.pdf`
     const filePath = join(UPLOAD_DIR, pdfFilename)
     
-    if (!existsSync(UPLOAD_DIR)) {
-      await ensureDir(UPLOAD_DIR)
-    }
+    await mkdir(UPLOAD_DIR, { recursive: true })
     
-    await writeFile(filePath, pdfBuffer)
+    await writeFile(filePath, Buffer.from(pdfBuffer))
     
     // Update variation with new PDF URL
     await prisma.variation.update({

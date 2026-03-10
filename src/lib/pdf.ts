@@ -1,9 +1,29 @@
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
-import { formatCurrency, formatNumber } from './upload'
-import { Variation } from '@types/index'
+import autoTable from 'jspdf-autotable'
+import { formatCurrency } from './upload'
 
-export function generatePDF(variation: Variation): ArrayBuffer {
+type PdfVariation = {
+  id: string
+  projectName: string
+  clientName: string
+  clientEmail: string
+  clientPhone: string
+  address: string
+  suburb: string
+  state: string
+  postcode: string
+  description: string
+  measurements: string
+  items: string
+  totalLabor: number
+  totalMaterials: number
+  tax: number
+  total: number
+  notes?: string | null
+  updatedAt: Date | string
+}
+
+export function generatePDF(variation: PdfVariation): ArrayBuffer {
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.getWidth()
   
@@ -57,21 +77,21 @@ export function generatePDF(variation: Variation): ArrayBuffer {
   
   const itemRows = variation.items.split('\n').filter(Boolean).map(line => {
     const [name, quantity, unitPrice, total] = line.split('\t')
-    return {
-      item: name || 'Item',
-      qty: quantity || '',
-      price: unitPrice || '0.00',
-      total: total || '0.00',
-    }
+    return [
+      name || 'Item',
+      quantity || '',
+      unitPrice || '0.00',
+      total || '0.00',
+    ]
   })
   
-  doc.autoTable({
+  autoTable(doc, {
     startY: 185,
     head: [['Item', 'Qty', 'Unit Price', 'Total']],
     body: itemRows,  
     headStyles: {
       fillColor: [37, 99, 235],
-      textColor: 255, 255, 255,
+      textColor: [255, 255, 255],
       fontStyle: 'bold',
       halign: 'right'
     },

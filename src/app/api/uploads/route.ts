@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { writeFile, mkdir, ensureDir } from 'fs/promises'
-import { join, existsSync } from 'path'
+import { writeFile, mkdir } from 'fs/promises'
+import { join } from 'path'
 
 const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
 
@@ -23,9 +23,7 @@ export async function POST(request: NextRequest) {
     const filename = `${uuidv4()}.${extension}`
     const filePath = join(UPLOAD_DIR, filename)
     
-    if (!existsSync(UPLOAD_DIR)) {
-      await ensureDir(UPLOAD_DIR)
-    }
+    await mkdir(UPLOAD_DIR, { recursive: true })
     
     await writeFile(filePath, buffer)
     

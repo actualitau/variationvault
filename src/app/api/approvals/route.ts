@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { sendApprovalEmail, sendSmsMessage } from '@/lib/email'
-import { ApprovalUpdateDto, Variation } from '@types/index'
+import { ApprovalUpdateDto, Variation } from '@/types'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,8 +24,7 @@ export async function POST(request: NextRequest) {
     }
     
     const variation = await prisma.variation.findUnique({ 
-      where: { id: variationId },
-      include: { variations: true }
+      where: { id: variationId }
     })
     
     if (!variation) {

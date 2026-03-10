@@ -1,23 +1,29 @@
 import prisma from './prisma'
-import { ApprovalUpdateDto, Variation } from '@types/index'
+
+type EmailVariation = {
+  id: string
+  projectName: string
+  clientName: string
+}
 
 export async function sendApprovalEmail(
-  variation: Variation,
+  variation: EmailVariation,
   email: string,
-  action: 'approve' | 'reject' | 'changes',
+  action: 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED',
   comments?: string
 ) {
-  const subject = `${action === 'approve' ? 'Approved' : action === 'reject' ? 'Rejected' : 'Action Required'}: ${variation.projectName}`
+  const actionLabel = action === 'APPROVED' ? 'approved' : action === 'REJECTED' ? 'rejected' : 'marked for changes'
+  const subject = `${action === 'APPROVED' ? 'Approved' : action === 'REJECTED' ? 'Rejected' : 'Action Required'}: ${variation.projectName}`
   const message = `
 Hello ${variation.clientName},
 
-Your estimate for "${variation.projectName}" has been ${action}.
+Your estimate for "${variation.projectName}" has been ${actionLabel}.
 
 ${comments ? `Comments: ${comments}\n\n` : ''}
 View the full estimate: https://variationvault.com/estimates/${variation.id}
 
 Best regards,
-${variation.company || 'Your Company'}
+VariationVault
   `.trim()
 
   try {

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { generatePDF } from '@/lib/pdf'
-import { CreateVariationDto } from '@types/index'
-import { writeFile, mkdir, ensureDir } from 'fs/promises'
-import { join, existsSync } from 'path'
+import { CreateVariationDto } from '@/types'
+import { writeFile, mkdir } from 'fs/promises'
+import { join } from 'path'
 
 const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
 
-const createVariationSchema = {
+const createVariationSchema: { required: Array<keyof CreateVariationDto> } = {
   required: [
     'projectId', 'projectName', 'clientName', 'clientEmail', 
     'clientPhone', 'address', 'suburb', 'state', 'postcode'
@@ -27,23 +27,26 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    const tax = body.tax ?? 0
+    const total = body.totalLabor + body.totalMaterials + tax
+
     const newVariation = await prisma.variation.create({
       data: {
         ...body,
         status: 'DRAFT',
         approvalStatus: 'PENDING',
-        tax: 0, // Will be calculated in frontend
+        tax,
+        total,
+        createdBy: request.headers.get('x-user-email') || 'system',
       },
     })
     
     // Generate initial PDF
-    if (!existsSync(UPLOAD_DIR)) {
-      await ensureDir(UPLOAD_DIR)
-    }
+    await mkdir(UPLOAD_DIR, { recursive: true })
     
     const pdfBuffer = generatePDF(newVariation)
     const pdfFilename = `${newVariation.id}.pdf`
-    await writeFile(join(UPLOAD_DIR, pdfFilename), pdfBuffer)
+    await writeFile(join(UPLOAD_DIR, pdfFilename), Buffer.from(pdfBuffer))
     
     const updatedVariation = await prisma.variation.update({
       where: { id: newVariation.id },

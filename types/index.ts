@@ -17,7 +17,7 @@ export interface Variation {
   totalMaterials: number
   tax: number
   total: number
-  notes?: string
+  notes?: string | null
   status: 'DRAFT' | 'SENT' | 'CLIENT_REVIEW' | 'APPROVED' | 'REJECTED' | 'COMPLETED'
   approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED'
   pdfUrl?: string
@@ -25,8 +25,7 @@ export interface Variation {
   createdBy: string
   createdAt: Date
   updatedAt: Date
-  versionHistory: VariationVersion[]
-  variations: VariationVersion[]
+  versionHistory?: VariationVersion[]
 }
 
 export interface VariationVersion {

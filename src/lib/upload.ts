@@ -1,17 +1,23 @@
-import { writeFile, mkdir, ensureDir } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 
 const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
 
-export async function uploadFile(file: Express.Multer.File): Promise<string> {
+type UploadedFile = {
+  originalname: string
+  buffer: Buffer
+  mimetype: string
+}
+
+export async function uploadFile(file: UploadedFile): Promise<string> {
   const extension = file.originalname.split('.').pop()
   const filename = `${uuidv4()}.${extension}`
   const filePath = join(UPLOAD_DIR, filename)
   
   if (!existsSync(UPLOAD_DIR)) {
-    await ensureDir(UPLOAD_DIR)
+    await mkdir(UPLOAD_DIR, { recursive: true })
   }
   
   await writeFile(filePath, file.buffer)
@@ -19,7 +25,7 @@ export async function uploadFile(file: Express.Multer.File): Promise<string> {
   return `/uploads/${filename}`
 }
 
-export function isImage(file: Express.Multer.File): boolean {
+export function isImage(file: UploadedFile): boolean {
   return file.mimetype.startsWith('image/')
 }
 

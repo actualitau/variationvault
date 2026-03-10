@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { generatePDF } from '@/lib/pdf'
-import { writeFile, ensureDir } from 'fs/promises'
-import { join, existsSync } from 'path'
-import { Approvals, ApprovalUpdateDto } from '@types/index'
-import { sendApprovalEmail, sendSmsMessage } from '@/lib/email'
 
 const ALLOWED_STATUS = ['DRAFT', 'SENT', 'CLIENT_REVIEW', 'APPROVED', 'REJECTED', 'COMPLETED']
 
