@@ -1,14 +1,6 @@
 export interface Variation {
   id: string
   projectId: string
-  projectName: string
-  clientName: string
-  clientEmail: string
-  clientPhone: string
-  address: string
-  suburb: string
-  state: string
-  postcode: string
   description: string
   measurements: string
   totalArea: string
@@ -25,7 +17,9 @@ export interface Variation {
   createdBy: string
   createdAt: Date
   updatedAt: Date
+  project: Project
   versionHistory?: VariationVersion[]
+  approvals?: Approvals[]
 }
 
 export interface VariationVersion {
@@ -35,6 +29,32 @@ export interface VariationVersion {
   images: string[]
   changes: string
   updatedAt: Date
+}
+
+export interface Client {
+  id: string
+  name: string
+  email: string
+  phone: string
+  company?: string | null
+  createdAt: Date
+  updatedAt: Date
+  projects?: Project[]
+}
+
+export interface Project {
+  id: string
+  clientId: string
+  code: string
+  name: string
+  address: string
+  suburb: string
+  state: string
+  postcode: string
+  createdAt: Date
+  updatedAt: Date
+  client: Client
+  variations?: Variation[]
 }
 
 export interface Approvals {
@@ -88,14 +108,6 @@ export interface User {
 
 export interface CreateVariationDto {
   projectId: string
-  projectName: string
-  clientName: string
-  clientEmail: string
-  clientPhone: string
-  address: string
-  suburb: string
-  state: string
-  postcode: string
   description: string
   measurements: string
   totalArea: string
@@ -104,9 +116,29 @@ export interface CreateVariationDto {
   totalMaterials: number
   tax: number
   notes?: string
+  images?: string[]
+}
+
+export interface CreateClientDto {
+  name: string
+  email: string
+  phone: string
+  company?: string
+}
+
+export interface CreateProjectDto {
+  clientId: string
+  code: string
+  name: string
+  address: string
+  suburb: string
+  state: string
+  postcode: string
 }
 
 export interface ApprovalUpdateDto {
   status: 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED'
   comments?: string
+  variationId: string
+  signature?: string
 }
