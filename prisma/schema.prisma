@@ -25,15 +25,6 @@ enum NotificationStatus {
 model Variation {
   id              String    @id @default(cuid())
   projectId       String
-  projectName     String
-  clientName      String
-  clientEmail     String
-  clientPhone     String
-  address         String
-  suburb          String
-  state           String
-  postcode        String
-  projectRefId    String?   @map("project_ref_id")
   description     String
   measurements    String
   totalArea       String
@@ -50,12 +41,12 @@ model Variation {
   createdBy       String
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  project         Project?  @relation(fields: [projectRefId], references: [id], onDelete: SetNull)
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   versionHistory  VariationVersion[]
   approvals       Approvals[]
   notifications   Notifications[]
   
-  @@index([projectRefId])
+  @@index([projectId])
   @@map("variations")
 }
 

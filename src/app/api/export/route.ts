@@ -31,38 +31,22 @@ export async function GET(request: NextRequest) {
     if (!variation) {
       return NextResponse.json({ error: 'Variation not found' }, { status: 404 })
     }
-    
-    const legacyVariation = variation as typeof variation & {
-      projectName: string
-      clientName: string
-      clientEmail: string
-      clientPhone: string
-      address: string
-      suburb: string
-      state: string
-      postcode: string
-    }
 
-    const projectName = variation.project?.name ?? legacyVariation.projectName
-    const clientName = variation.project?.client.name ?? legacyVariation.clientName
-    const clientEmail = variation.project?.client.email ?? legacyVariation.clientEmail
-    const clientPhone = variation.project?.client.phone ?? legacyVariation.clientPhone
-    const address = variation.project?.address ?? legacyVariation.address
-    const suburb = variation.project?.suburb ?? legacyVariation.suburb
-    const state = variation.project?.state ?? legacyVariation.state
-    const postcode = variation.project?.postcode ?? legacyVariation.postcode
+    if (!variation.project) {
+      return NextResponse.json({ error: 'Variation is missing a linked project' }, { status: 409 })
+    }
     
     // Generate fresh PDF
     const pdfBuffer = generatePDF({
       ...variation,
-      projectName,
-      clientName,
-      clientEmail,
-      clientPhone,
-      address,
-      suburb,
-      state,
-      postcode,
+      projectName: variation.project.name,
+      clientName: variation.project.client.name,
+      clientEmail: variation.project.client.email,
+      clientPhone: variation.project.client.phone,
+      address: variation.project.address,
+      suburb: variation.project.suburb,
+      state: variation.project.state,
+      postcode: variation.project.postcode,
     })
     const blob = await uploadPublicBlob(`exports/${variationId}.pdf`, pdfBuffer, {
       contentType: 'application/pdf',

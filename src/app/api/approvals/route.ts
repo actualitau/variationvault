@@ -41,17 +41,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Variation not found' }, { status: 404 })
     }
 
-    const legacyVariation = variation as typeof variation & {
-      projectName: string
-      clientName: string
-      clientEmail: string
-      clientPhone: string
+    if (!variation.project) {
+      return NextResponse.json({ error: 'Variation is missing a linked project' }, { status: 409 })
     }
 
-    const projectName = variation.project?.name ?? legacyVariation.projectName
-    const clientName = variation.project?.client.name ?? legacyVariation.clientName
-    const clientEmail = variation.project?.client.email ?? legacyVariation.clientEmail
-    const clientPhone = variation.project?.client.phone ?? legacyVariation.clientPhone
+    const projectName = variation.project.name
+    const clientName = variation.project.client.name
+    const clientEmail = variation.project.client.email
+    const clientPhone = variation.project.client.phone
 
     const comments = body.signature
       ? `${body.comments?.trim() || ''}${body.comments ? '\n\n' : ''}Signed by: ${body.signature}`.trim()
@@ -81,30 +78,26 @@ export async function POST(request: NextRequest) {
 
     const notificationPromises = []
 
-    if (clientEmail) {
-      notificationPromises.push(
-        sendApprovalEmail(
-          {
-            id: variation.id,
-            projectName,
-            clientName,
-          },
-          clientEmail,
-          body.status,
-          comments
-        )
+    notificationPromises.push(
+      sendApprovalEmail(
+        {
+          id: variation.id,
+          projectName,
+          clientName,
+        },
+        clientEmail,
+        body.status,
+        comments
       )
-    }
+    )
 
-    if (clientPhone) {
-      notificationPromises.push(
-        sendSmsMessage(
-          variation.id,
-          clientPhone,
-          `Update for ${projectName}: ${body.status.replace('_', ' ').toLowerCase()}`
-        )
+    notificationPromises.push(
+      sendSmsMessage(
+        variation.id,
+        clientPhone,
+        `Update for ${projectName}: ${body.status.replace('_', ' ').toLowerCase()}`
       )
-    }
+    )
 
     await Promise.all(notificationPromises)
 

@@ -37,16 +37,7 @@ export async function POST(request: NextRequest) {
     const total = totalLabor + totalMaterials + tax
 
     const createData = {
-      projectId: project.code,
-      projectName: project.name,
-      clientName: project.client.name,
-      clientEmail: project.client.email,
-      clientPhone: project.client.phone,
-      address: project.address,
-      suburb: project.suburb,
-      state: project.state,
-      postcode: project.postcode,
-      projectRefId: project.id,
+      projectId: project.id,
       description: variationData.description,
       measurements: variationData.measurements,
       totalArea: variationData.totalArea,
