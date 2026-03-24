@@ -55,12 +55,12 @@ VariationVault
   }
 }
 
-export async function sendSmsMessage(phone: string, message: string) {
+export async function sendSmsMessage(variationId: string, phone: string, message: string) {
   try {
     // TODO: Integrate with SMS service (Twilio, etc.)
     await prisma.notifications.create({
       data: {
-        variationId: new Date().toISOString(), // Placeholder
+        variationId,
         type: 'SMS',
         status: 'SENT',
         recipient: phone,
@@ -72,7 +72,7 @@ export async function sendSmsMessage(phone: string, message: string) {
   } catch (error) {
     await prisma.notifications.create({
       data: {
-        variationId: new Date().toISOString(), // Placeholder
+        variationId,
         type: 'SMS',
         status: 'FAILED',
         recipient: phone,

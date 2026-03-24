@@ -1,15 +1,10 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'VariationVault - Quick Variation Approvals',
   description: 'Mobile-first variation approval system for Australian tradies',
   manifest: '/manifest.json',
-  themeColor: '#2563eb',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -17,11 +12,35 @@ export const metadata: Metadata = {
   }
 }
 
+export const viewport: Viewport = {
+  themeColor: '#2563eb',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const unregisterServiceWorkerInDev = `
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+      window.addEventListener('load', async () => {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+      });
+    }
+  `
+
   return (
     <html lang="en">
       <head>
@@ -32,8 +51,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="VariationVault" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#2563eb" />
+        {process.env.NODE_ENV !== 'production' ? (
+          <script dangerouslySetInnerHTML={{ __html: unregisterServiceWorkerInDev }} />
+        ) : null}
       </head>
-      <body className={`${inter.className} antialiased`}>
+      <body className="antialiased">
         <div className="min-h-screen bg-gray-50">
           {children}
         </div>

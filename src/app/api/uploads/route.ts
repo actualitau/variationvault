@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v4 as uuidv4 } from 'uuid'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-
-const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
+import { uploadPublicBlob } from '@/lib/blob'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,18 +15,15 @@ export async function POST(request: NextRequest) {
     }
     
     const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
     const extension = file.name.split('.').pop() || 'jpg'
-    const filename = `${uuidv4()}.${extension}`
-    const filePath = join(UPLOAD_DIR, filename)
-    
-    await mkdir(UPLOAD_DIR, { recursive: true })
-    
-    await writeFile(filePath, buffer)
+    const filename = `uploads/${uuidv4()}.${extension}`
+    const blob = await uploadPublicBlob(filename, bytes, {
+      contentType: file.type || undefined,
+    })
     
     return NextResponse.json({
       success: true,
-      url: `/uploads/${filename}`
+      url: blob.url
     })
   } catch (error) {
     console.error('Error uploading file:', error)

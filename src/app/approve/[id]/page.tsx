@@ -1,58 +1,55 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { getVariationImages, normalizeApprovalDecision, type ApprovalDecision } from '@/lib/variation-contract'
+import { mapRelationVariationToDetail } from '@/lib/relations'
 
-interface Variation {
-  id: string;
-  jobId: string;
-  clientEmail: string;
-  description: string;
-  reason: string;
-  scopeChange: string;
-  materialCost: number;
-  laborCost: number;
-  gst: number;
-  totalCost: number;
-  status: string;
-  photos: string[];
+type VariationDetail = ReturnType<typeof mapRelationVariationToDetail>
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
+  }).format(amount)
 }
 
 export default function ApprovalPage() {
-  const params = useParams();
-  const [variation, setVariation] = useState<Variation | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [decision, setDecision] = useState<'approved' | 'rejected' | null>(null);
-  const [notes, setNotes] = useState('');
-  const [signature, setSignature] = useState('');
+  const params = useParams<{ id: string }>()
+  const [variation, setVariation] = useState<VariationDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [decision, setDecision] = useState<ApprovalDecision | null>(null)
+  const [notes, setNotes] = useState('')
+  const [signature, setSignature] = useState('')
+  const [submittedStatus, setSubmittedStatus] = useState<string | null>(null)
 
   useEffect(() => {
-    if (params.id) {
-      loadVariation(params.id as string);
-    }
-  }, [params.id]);
+    const loadVariation = async () => {
+      if (!params.id) return
 
-  const loadVariation = async (id: string) => {
-    try {
-      const response = await fetch(`/api/variations/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setVariation(data);
+      try {
+        const response = await fetch(`/api/variations/${params.id}`)
+        if (!response.ok) throw new Error('Failed to load variation')
+        const data = await response.json()
+        setVariation(mapRelationVariationToDetail(data))
+      } catch (error) {
+        console.error('Failed to load variation:', error)
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Failed to load variation:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+
+    void loadVariation()
+  }, [params.id])
 
   const submitDecision = async () => {
-    if (!variation || !decision) return;
-    
-    setSubmitting(true);
-    
+    if (!variation || !decision || !signature.trim()) return
+
+    setSubmitting(true)
+
     try {
+      const status = normalizeApprovalDecision(decision)
       const response = await fetch('/api/approvals', {
         method: 'POST',
         headers: {
@@ -60,245 +57,149 @@ export default function ApprovalPage() {
         },
         body: JSON.stringify({
           variationId: variation.id,
-          decision,
-          notes,
-          signature
+          status,
+          comments: notes,
+          signature,
         }),
-      });
+      })
 
-      if (response.ok) {
-        // Show success message
-        setDecision(decision); // This will trigger the success view
-      } else {
-        alert('Failed to submit decision');
-      }
+      if (!response.ok) throw new Error('Failed to submit approval')
+      setSubmittedStatus(status)
     } catch (error) {
-      alert('Error submitting decision');
+      console.error('Failed to submit approval:', error)
+      alert('Failed to submit approval')
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: 'AUD'
-    }).format(amount);
-  };
+  }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl font-semibold mb-2">Loading variation...</div>
-          <div className="text-gray-600">Please wait</div>
-        </div>
-      </div>
-    );
+    return <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-600">Loading estimate...</div>
   }
 
   if (!variation) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl font-semibold mb-2">Variation not found</div>
-          <div className="text-gray-600">This approval link may be invalid or expired</div>
-        </div>
-      </div>
-    );
+    return <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-600">Estimate not found.</div>
   }
 
-  if (variation.status !== 'pending') {
+  if (submittedStatus) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-xl font-semibold mb-2">Already processed</div>
-          <div className="text-gray-600">This variation has already been {variation.status}</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Success view after submission
-  if (submitting === false && decision) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md mx-auto px-4 text-center">
-          <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
-            decision === 'approved' ? 'bg-green-100' : 'bg-red-100'
-          }`}>
-            <div className={`text-2xl ${decision === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
-              {decision === 'approved' ? '✓' : '✗'}
-            </div>
-          </div>
-          
-          <h1 className="text-2xl font-bold mb-2">
-            Variation {decision === 'approved' ? 'Approved' : 'Rejected'}
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow">
+          <h1 className="text-2xl font-bold text-slate-900">
+            {submittedStatus === 'APPROVED' ? 'Estimate approved' : 'Response received'}
           </h1>
-          
-          <p className="text-gray-600 mb-6">
-            Thank you for your decision. The contractor has been notified.
-          </p>
-          
-          <div className="bg-white rounded-lg p-4 shadow text-left">
-            <div className="text-sm text-gray-600">Job {variation.jobId}</div>
-            <div className="font-medium">{variation.description}</div>
-            <div className="text-lg font-bold text-blue-600 mt-2">
-              {formatCurrency(variation.totalCost)}
-            </div>
-          </div>
+          <p className="mt-2 text-gray-600">Your decision has been recorded and the contractor has been notified.</p>
         </div>
       </div>
-    );
+    )
   }
+
+  if (variation.approvalStatus !== 'PENDING') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow">
+          <h1 className="text-2xl font-bold text-slate-900">Already processed</h1>
+          <p className="mt-2 text-gray-600">
+            This estimate has already been marked as {variation.approvalStatus.replace('_', ' ').toLowerCase()}.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const images = getVariationImages(variation)
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-md mx-auto px-4 py-4">
-          <h1 className="text-xl font-bold text-center">Variation Approval</h1>
+      <div className="bg-slate-900 text-white shadow-sm">
+        <div className="mx-auto max-w-3xl px-4 py-4 text-center">
+          <h1 className="text-xl font-bold">Estimate Approval</h1>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 py-6">
-        {/* Variation Summary */}
-        <div className="bg-white rounded-lg p-4 shadow mb-6">
-          <div className="text-center mb-4">
-            <div className="text-2xl font-bold text-gray-900">Job {variation.jobId}</div>
-            <div className="text-gray-600">{variation.clientEmail}</div>
-          </div>
-          
-          <div className="space-y-3">
-            <div>
-              <div className="text-sm text-gray-600">Description</div>
-              <div className="font-medium">{variation.description}</div>
-            </div>
-            
-            <div>
-              <div className="text-sm text-gray-600">Reason for change</div>
-              <div className="capitalize">{variation.reason.replace('-', ' ')}</div>
-            </div>
-            
-            <div>
-              <div className="text-sm text-gray-600">What's changing</div>
-              <div>{variation.scopeChange}</div>
-            </div>
-          </div>
-        </div>
+      <div className="mx-auto max-w-3xl px-4 py-6">
+        <div className="space-y-6">
+          <section className="rounded-xl bg-white p-5 shadow">
+            <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{variation.projectCode}</div>
+            <h2 className="mt-2 text-2xl font-bold text-slate-900">{variation.projectName}</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              {variation.clientName} • {variation.clientEmail}
+            </p>
+            <div className="mt-5 whitespace-pre-wrap text-sm text-gray-700">{variation.description}</div>
+          </section>
 
-        {/* Photos */}
-        {variation.photos.length > 0 && (
-          <div className="bg-white rounded-lg p-4 shadow mb-6">
-            <h3 className="font-semibold mb-3">Photos</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {variation.photos.map((photo, index) => (
-                <img
-                  key={index}
-                  src={photo}
-                  alt={`Evidence ${index + 1}`}
-                  className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80"
-                  onClick={() => window.open(photo, '_blank')}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+          {images.length > 0 ? (
+            <section className="rounded-xl bg-white p-5 shadow">
+              <h3 className="text-lg font-semibold text-slate-900">Evidence</h3>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {images.map((image, index) => (
+                  <img key={`${image}-${index}`} src={image} alt={`Evidence ${index + 1}`} className="h-40 w-full rounded-xl object-cover" />
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-        {/* Cost Breakdown */}
-        <div className="bg-white rounded-lg p-4 shadow mb-6">
-          <h3 className="font-semibold mb-3">Cost</h3>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Materials:</span>
-              <span>{formatCurrency(variation.materialCost)}</span>
+          <section className="rounded-xl bg-white p-5 shadow">
+            <h3 className="text-lg font-semibold text-slate-900">Estimate Total</h3>
+            <div className="mt-4 space-y-3">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Labor</span>
+                <span>{formatCurrency(variation.totalLabor)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Materials</span>
+                <span>{formatCurrency(variation.totalMaterials)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Tax</span>
+                <span>{formatCurrency(variation.tax)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-3 text-xl font-bold text-blue-600">
+                <span>Total</span>
+                <span>{formatCurrency(variation.total)}</span>
+              </div>
             </div>
-            
-            <div className="flex justify-between">
-              <span className="text-gray-600">Labor:</span>
-              <span>{formatCurrency(variation.laborCost)}</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="text-gray-600">GST (10%):</span>
-              <span>{formatCurrency(variation.gst)}</span>
-            </div>
-            
-            <div className="flex justify-between text-xl font-bold border-t pt-2">
-              <span>Total:</span>
-              <span className="text-blue-600">{formatCurrency(variation.totalCost)}</span>
-            </div>
-          </div>
-        </div>
+          </section>
 
-        {/* Decision Buttons */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setDecision('approved')}
-              className={`py-4 px-6 rounded-lg font-semibold transition-colors ${
-                decision === 'approved'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-green-100 hover:bg-green-200 text-green-800'
-              }`}
-            >
-              ✓ Approve
-            </button>
-            
-            <button
-              onClick={() => setDecision('rejected')}
-              className={`py-4 px-6 rounded-lg font-semibold transition-colors ${
-                decision === 'rejected'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-red-100 hover:bg-red-200 text-red-800'
-              }`}
-            >
-              ✗ Reject
-            </button>
-          </div>
+          <section className="rounded-xl bg-white p-5 shadow">
+            <h3 className="text-lg font-semibold text-slate-900">Your Decision</h3>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <button type="button" onClick={() => setDecision('approved')} className="rounded-lg bg-emerald-100 px-4 py-4 font-semibold text-emerald-800">
+                Approve
+              </button>
+              <button type="button" onClick={() => setDecision('changes_requested')} className="rounded-lg bg-amber-100 px-4 py-4 font-semibold text-amber-900">
+                Request Changes
+              </button>
+              <button type="button" onClick={() => setDecision('rejected')} className="rounded-lg bg-rose-100 px-4 py-4 font-semibold text-rose-800">
+                Reject
+              </button>
+            </div>
 
-          {/* Notes */}
-          {decision && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notes (optional)
-                </label>
+            {decision ? (
+              <div className="mt-5 space-y-4">
                 <textarea
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Any additional comments..."
+                  onChange={(event) => setNotes(event.target.value)}
+                  className="form-input"
+                  rows={4}
+                  placeholder="Add any notes for the contractor."
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Digital Signature
-                </label>
                 <input
                   type="text"
                   value={signature}
-                  onChange={(e) => setSignature(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(event) => setSignature(event.target.value)}
+                  className="form-input"
                   placeholder="Type your full name"
                   required
                 />
+                <button type="button" onClick={submitDecision} disabled={!signature.trim() || submitting} className="btn-primary w-full justify-center">
+                  {submitting ? 'Submitting...' : 'Submit Response'}
+                </button>
               </div>
-
-              <button
-                onClick={submitDecision}
-                disabled={!signature || submitting}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-4 px-6 rounded-lg transition-colors"
-              >
-                {submitting ? 'Submitting...' : `Submit ${decision === 'approved' ? 'Approval' : 'Rejection'}`}
-              </button>
-            </div>
-          )}
+            ) : null}
+          </section>
         </div>
       </div>
     </div>
-  );
+  )
 }

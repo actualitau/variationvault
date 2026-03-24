@@ -18,10 +18,12 @@
   button,
   input,
   select,
-  textarea,
+  textarea {
+    min-height: 44px;
+  }
+
   a {
     min-height: 44px;
-    @apply flex items-center;
   }
 
   /* Better focus states for accessibility */

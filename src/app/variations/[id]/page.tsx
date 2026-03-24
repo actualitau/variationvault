@@ -1,283 +1,207 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { Header } from '../../../components/Header';
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
+import { Header } from '../../../components/Header'
+import { getVariationImages } from '@/lib/variation-contract'
+import { mapRelationVariationToDetail } from '@/lib/relations'
 
-interface Variation {
-  id: string;
-  jobId: string;
-  clientEmail: string;
-  description: string;
-  reason: string;
-  scopeChange: string;
-  materialCost: number;
-  laborCost: number;
-  gst: number;
-  totalCost: number;
-  status: string;
-  createdAt: string;
-  photos: string[];
-  approvedAt?: string;
-  rejectedAt?: string;
-  notes?: string;
+type VariationDetail = ReturnType<typeof mapRelationVariationToDetail>
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
+  }).format(amount)
 }
 
 export default function VariationDetailPage() {
-  const params = useParams();
-  const [variation, setVariation] = useState<Variation | null>(null);
-  const [loading, setLoading] = useState(true);
+  const params = useParams<{ id: string }>()
+  const [variation, setVariation] = useState<VariationDetail | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (params.id) {
-      loadVariation(params.id as string);
-    }
-  }, [params.id]);
+    const loadVariation = async () => {
+      if (!params.id) return
 
-  const loadVariation = async (id: string) => {
-    try {
-      const response = await fetch(`/api/variations/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setVariation(data);
+      try {
+        const response = await fetch(`/api/variations/${params.id}`)
+        if (!response.ok) throw new Error('Failed to load variation')
+        const data = await response.json()
+        setVariation(mapRelationVariationToDetail(data))
+      } catch (error) {
+        console.error('Failed to load variation:', error)
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Failed to load variation:', error);
-    } finally {
-      setLoading(false);
     }
-  };
 
-  const exportToPDF = async () => {
-    if (!variation) return;
-    
-    try {
-      const response = await fetch('/api/export', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ variationId: variation.id }),
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `variation-${variation.jobId}-${variation.id}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert('Failed to export PDF');
-      }
-    } catch (error) {
-      alert('Error exporting PDF');
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: 'AUD'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-AU');
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+    void loadVariation()
+  }, [params.id])
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="max-w-md mx-auto px-4 py-8">
-          <div className="text-center">Loading variation...</div>
-        </div>
+        <div className="mx-auto max-w-4xl px-4 py-10 text-center text-gray-600">Loading estimate...</div>
       </div>
-    );
+    )
   }
 
   if (!variation) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="max-w-md mx-auto px-4 py-8">
-          <div className="text-center">
-            <div className="text-gray-500 mb-4">Variation not found</div>
-            <a href="/variations" className="text-blue-600 hover:text-blue-800">
-              Back to variations
-            </a>
-          </div>
+        <div className="mx-auto max-w-4xl px-4 py-10 text-center">
+          <div className="text-gray-500">Estimate not found.</div>
+          <Link href="/variations" className="mt-4 inline-flex text-blue-600 hover:text-blue-800">
+            Back to estimates
+          </Link>
         </div>
       </div>
-    );
+    )
   }
+
+  const images = getVariationImages(variation)
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
-      <div className="max-w-md mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Job {variation.jobId}
-          </h1>
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(variation.status)}`}>
-            {variation.status}
-          </span>
+
+      <div className="mx-auto max-w-4xl px-4 py-6">
+        <div className="mb-6 flex flex-col gap-4 rounded-2xl bg-slate-900 p-6 text-white shadow lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="text-xs font-medium uppercase tracking-[0.2em] text-blue-200">{variation.projectCode}</div>
+            <h1 className="mt-2 text-3xl font-bold">{variation.projectName}</h1>
+            <p className="mt-2 text-sm text-slate-200">
+              {variation.clientName} • {variation.clientEmail} • {variation.clientPhone}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">{variation.status}</span>
+            <span className="rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-100">
+              {variation.approvalStatus.replace('_', ' ')}
+            </span>
+            <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-100">
+              Version {variation.version}
+            </span>
+          </div>
         </div>
 
-        {/* Variation Details */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg p-4 shadow">
-            <h2 className="text-lg font-semibold mb-3">Details</h2>
-            
-            <div className="space-y-3">
-              <div>
-                <div className="text-sm text-gray-600">Client</div>
-                <div className="font-medium">{variation.clientEmail}</div>
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="space-y-6">
+            <section className="rounded-xl bg-white p-5 shadow">
+              <h2 className="text-lg font-semibold text-gray-900">Scope</h2>
+              <p className="mt-3 whitespace-pre-wrap text-gray-700">{variation.description}</p>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div>
+                  <div className="text-sm font-medium text-gray-500">Measurements</div>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{variation.measurements}</p>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-500">Total Area</div>
+                  <p className="mt-1 text-sm text-gray-700">{variation.totalArea}</p>
+                </div>
               </div>
-              
-              <div>
-                <div className="text-sm text-gray-600">Description</div>
-                <div>{variation.description}</div>
+
+              <div className="mt-5">
+                <div className="text-sm font-medium text-gray-500">Items</div>
+                <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                  {variation.items}
+                </pre>
               </div>
-              
-              <div>
-                <div className="text-sm text-gray-600">Reason</div>
-                <div className="capitalize">{variation.reason.replace('-', ' ')}</div>
-              </div>
-              
-              <div>
-                <div className="text-sm text-gray-600">Scope Change</div>
-                <div>{variation.scopeChange}</div>
-              </div>
-              
-              <div>
-                <div className="text-sm text-gray-600">Created</div>
-                <div>{formatDate(variation.createdAt)}</div>
-              </div>
-            </div>
+
+              {variation.notes ? (
+                <div className="mt-5">
+                  <div className="text-sm font-medium text-gray-500">Notes</div>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">{variation.notes}</p>
+                </div>
+              ) : null}
+            </section>
+
+            {images.length > 0 ? (
+              <section className="rounded-xl bg-white p-5 shadow">
+                <h2 className="text-lg font-semibold text-gray-900">Evidence</h2>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {images.map((image, index) => (
+                    <img key={`${image}-${index}`} src={image} alt={`Estimate evidence ${index + 1}`} className="h-40 w-full rounded-xl object-cover" />
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
 
-          {/* Photo Evidence */}
-          {variation.photos.length > 0 && (
-            <div className="bg-white rounded-lg p-4 shadow">
-              <h2 className="text-lg font-semibold mb-3">Photo Evidence</h2>
-              <div className="grid grid-cols-2 gap-3">
-                {variation.photos.map((photo, index) => (
-                  <img
-                    key={index}
-                    src={photo}
-                    alt={`Evidence ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-lg cursor-pointer hover:opacity-80"
-                    onClick={() => window.open(photo, '_blank')}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="space-y-6">
+            <section className="rounded-xl bg-white p-5 shadow">
+              <h2 className="text-lg font-semibold text-gray-900">Client & Site</h2>
 
-          {/* Cost Breakdown */}
-          <div className="bg-white rounded-lg p-4 shadow">
-            <h2 className="text-lg font-semibold mb-3">Cost Breakdown</h2>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Materials:</span>
-                <span>{formatCurrency(variation.materialCost)}</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">Labor:</span>
-                <span>{formatCurrency(variation.laborCost)}</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">GST (10%):</span>
-                <span>{formatCurrency(variation.gst)}</span>
-              </div>
-              
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total:</span>
-                <span className="text-blue-600">{formatCurrency(variation.totalCost)}</span>
-              </div>
-            </div>
-          </div>
+              <div className="mt-4 space-y-4 text-sm text-gray-700">
+                <div>
+                  <div className="font-medium text-gray-500">Client</div>
+                  <div>{variation.clientName}</div>
+                  <div>{variation.clientEmail}</div>
+                  <div>{variation.clientPhone}</div>
+                </div>
 
-          {/* Status Information */}
-          {(variation.approvedAt || variation.rejectedAt || variation.notes) && (
-            <div className="bg-white rounded-lg p-4 shadow">
-              <h2 className="text-lg font-semibold mb-3">Status Details</h2>
-              
-              <div className="space-y-2">
-                {variation.approvedAt && (
+                <div>
+                  <div className="font-medium text-gray-500">Address</div>
+                  <div>{variation.address}</div>
                   <div>
-                    <div className="text-sm text-gray-600">Approved</div>
-                    <div>{formatDate(variation.approvedAt)}</div>
+                    {variation.suburb}, {variation.state} {variation.postcode}
                   </div>
-                )}
-                
-                {variation.rejectedAt && (
-                  <div>
-                    <div className="text-sm text-gray-600">Rejected</div>
-                    <div>{formatDate(variation.rejectedAt)}</div>
-                  </div>
-                )}
-                
-                {variation.notes && (
-                  <div>
-                    <div className="text-sm text-gray-600">Notes</div>
-                    <div>{variation.notes}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+                </div>
 
-          {/* Actions */}
-          <div className="space-y-3">
-            <button
-              onClick={exportToPDF}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-            >
-              Export PDF
-            </button>
-            
-            {variation.status.toLowerCase() === 'pending' && (
-              <a
-                href={`/approve/${variation.id}`}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors text-center block"
-              >
-                Send for Approval
-              </a>
-            )}
-            
-            <a
-              href="/variations"
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 px-6 rounded-lg transition-colors text-center block"
-            >
-              Back to Variations
-            </a>
+                <div>
+                  <div className="font-medium text-gray-500">Created</div>
+                  <div>{new Date(variation.createdAt).toLocaleString('en-AU')}</div>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-xl bg-white p-5 shadow">
+              <h2 className="text-lg font-semibold text-gray-900">Pricing</h2>
+
+              <div className="mt-4 space-y-3">
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Labor</span>
+                  <span>{formatCurrency(variation.totalLabor)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Materials</span>
+                  <span>{formatCurrency(variation.totalMaterials)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Tax</span>
+                  <span>{formatCurrency(variation.tax)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-3 text-xl font-bold text-blue-600">
+                  <span>Total</span>
+                  <span>{formatCurrency(variation.total)}</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-xl bg-white p-5 shadow">
+              <h2 className="text-lg font-semibold text-gray-900">Actions</h2>
+
+              <div className="mt-4 space-y-3">
+                <a href={`/api/export?variationId=${variation.id}`} className="btn-primary w-full justify-center">
+                  Export PDF
+                </a>
+                <Link href={`/approve/${variation.id}`} className="flex w-full justify-center rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-emerald-700">
+                  Open Approval View
+                </Link>
+                <Link href="/variations" className="btn-secondary w-full justify-center">
+                  Back to Estimates
+                </Link>
+              </div>
+            </section>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

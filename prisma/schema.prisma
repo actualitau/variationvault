@@ -33,6 +33,7 @@ model Variation {
   suburb          String
   state           String
   postcode        String
+  projectRefId    String?   @map("project_ref_id")
   description     String
   measurements    String
   totalArea       String
@@ -49,11 +50,45 @@ model Variation {
   createdBy       String
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  project         Project?  @relation(fields: [projectRefId], references: [id], onDelete: SetNull)
   versionHistory  VariationVersion[]
   approvals       Approvals[]
   notifications   Notifications[]
   
+  @@index([projectRefId])
   @@map("variations")
+}
+
+model Client {
+  id        String    @id @default(cuid())
+  name      String
+  email     String
+  phone     String
+  company   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projects  Project[]
+
+  @@index([email])
+  @@map("clients")
+}
+
+model Project {
+  id         String      @id @default(cuid())
+  clientId   String
+  code       String
+  name       String
+  address    String
+  suburb     String
+  state      String
+  postcode   String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  client     Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  variations Variation[]
+
+  @@index([clientId])
+  @@map("projects")
 }
 
 model VariationVersion {

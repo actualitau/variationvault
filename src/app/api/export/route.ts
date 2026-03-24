@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { generatePDF } from '@/lib/pdf'
-import { writeFile, mkdir, readFile } from 'fs/promises'
-import { join } from 'path'
+import { uploadPublicBlob } from '@/lib/blob'
 
-const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,31 +18,64 @@ export async function GET(request: NextRequest) {
     }
     
     const variation = await prisma.variation.findUnique({ 
-      where: { id: variationId }
+      where: { id: variationId },
+      include: {
+        project: {
+          include: {
+            client: true,
+          },
+        },
+      },
     })
     
     if (!variation) {
       return NextResponse.json({ error: 'Variation not found' }, { status: 404 })
     }
     
+    const legacyVariation = variation as typeof variation & {
+      projectName: string
+      clientName: string
+      clientEmail: string
+      clientPhone: string
+      address: string
+      suburb: string
+      state: string
+      postcode: string
+    }
+
+    const projectName = variation.project?.name ?? legacyVariation.projectName
+    const clientName = variation.project?.client.name ?? legacyVariation.clientName
+    const clientEmail = variation.project?.client.email ?? legacyVariation.clientEmail
+    const clientPhone = variation.project?.client.phone ?? legacyVariation.clientPhone
+    const address = variation.project?.address ?? legacyVariation.address
+    const suburb = variation.project?.suburb ?? legacyVariation.suburb
+    const state = variation.project?.state ?? legacyVariation.state
+    const postcode = variation.project?.postcode ?? legacyVariation.postcode
+    
     // Generate fresh PDF
-    const pdfBuffer = generatePDF(variation)
-    const pdfFilename = `${variationId}.pdf`
-    const filePath = join(UPLOAD_DIR, pdfFilename)
-    
-    await mkdir(UPLOAD_DIR, { recursive: true })
-    
-    await writeFile(filePath, Buffer.from(pdfBuffer))
+    const pdfBuffer = generatePDF({
+      ...variation,
+      projectName,
+      clientName,
+      clientEmail,
+      clientPhone,
+      address,
+      suburb,
+      state,
+      postcode,
+    })
+    const blob = await uploadPublicBlob(`exports/${variationId}.pdf`, pdfBuffer, {
+      contentType: 'application/pdf',
+      cacheControlMaxAge: 60,
+    })
     
     // Update variation with new PDF URL
     await prisma.variation.update({
       where: { id: variationId },
-      data: { pdfUrl: `/uploads/${pdfFilename}` },
+      data: { pdfUrl: blob.url },
     })
-    
-    const downloadedPdf = await readFile(filePath)
-    
-    return new NextResponse(downloadedPdf, {
+
+    return new NextResponse(Buffer.from(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': 'attachment; filename="estimate.pdf"',

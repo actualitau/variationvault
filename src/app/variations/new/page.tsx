@@ -1,180 +1,405 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { Header } from '../../../components/Header';
-import { PhotoUpload } from '../../../components/PhotoUpload';
-import { CostCalculator } from '../../../components/CostCalculator';
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Header } from '../../../components/Header'
+import { PhotoUpload } from '../../../components/PhotoUpload'
+import { CostCalculator } from '../../../components/CostCalculator'
+import { buildCreateVariationPayload } from '@/lib/variation-contract'
+
+type ClientOption = {
+  id: string
+  name: string
+  email: string
+  phone: string
+}
+
+type ProjectOption = {
+  id: string
+  clientId: string
+  code: string
+  name: string
+  address: string
+  suburb: string
+  state: string
+  postcode: string
+}
+
+const initialFormData = {
+  projectId: '',
+  description: '',
+  measurements: '',
+  totalArea: '',
+  items: '',
+  totalLabor: 0,
+  totalMaterials: 0,
+  tax: 0,
+  notes: '',
+  images: [] as string[],
+}
+
+const initialClientDraft = {
+  name: '',
+  email: '',
+  phone: '',
+  company: '',
+}
+
+const initialProjectDraft = {
+  code: '',
+  name: '',
+  address: '',
+  suburb: '',
+  state: 'QLD',
+  postcode: '',
+}
 
 export default function NewVariationPage() {
-  const [formData, setFormData] = useState({
-    jobId: '',
-    clientEmail: '',
-    description: '',
-    reason: '',
-    scopeChange: '',
-    materialCost: 0,
-    laborCost: 0,
-    gst: 0,
-    totalCost: 0,
-    photos: [] as string[]
-  });
+  const router = useRouter()
+  const [clients, setClients] = useState<ClientOption[]>([])
+  const [projects, setProjects] = useState<ProjectOption[]>([])
+  const [selectedClientId, setSelectedClientId] = useState('')
+  const [selectedProjectId, setSelectedProjectId] = useState('')
+  const [createClientInline, setCreateClientInline] = useState(false)
+  const [createProjectInline, setCreateProjectInline] = useState(false)
+  const [clientDraft, setClientDraft] = useState(initialClientDraft)
+  const [projectDraft, setProjectDraft] = useState(initialProjectDraft)
+  const [formData, setFormData] = useState(initialFormData)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  useEffect(() => {
+    const loadClients = async () => {
+      const response = await fetch('/api/clients')
+      if (!response.ok) return
+      const data = await response.json()
+      setClients(data)
+    }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+    void loadClients()
+  }, [])
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      if (!selectedClientId) {
+        setProjects([])
+        return
+      }
+
+      const response = await fetch(`/api/projects?clientId=${selectedClientId}`)
+      if (!response.ok) return
+      const data = await response.json()
+      setProjects(data)
+    }
+
+    void loadProjects()
+  }, [selectedClientId])
+
+  const updateCosts = (materials: number, labor: number, tax: number) => {
+    setFormData((current) => ({
+      ...current,
+      totalMaterials: materials,
+      totalLabor: labor,
+      tax,
+    }))
+  }
+
+  const resolveClientId = async () => {
+    if (!createClientInline) return selectedClientId
+
+    const response = await fetch('/api/clients', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(clientDraft),
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to create client')
+    }
+
+    const client = await response.json()
+    setClients((current) => [...current, client].sort((a, b) => a.name.localeCompare(b.name)))
+    setSelectedClientId(client.id)
+    return client.id
+  }
+
+  const resolveProjectId = async (clientId: string) => {
+    if (!createProjectInline) return selectedProjectId
+
+    const response = await fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId,
+        ...projectDraft,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to create project')
+    }
+
+    const project = await response.json()
+    setProjects((current) => [...current, project].sort((a, b) => a.name.localeCompare(b.name)))
+    setSelectedProjectId(project.id)
+    return project.id
+  }
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setIsSubmitting(true)
 
     try {
+      const clientId = await resolveClientId()
+      if (!clientId) {
+        throw new Error('Client is required')
+      }
+
+      const projectId = await resolveProjectId(clientId)
+      if (!projectId) {
+        throw new Error('Project is required')
+      }
+
       const response = await fetch('/api/variations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
-      });
+        body: JSON.stringify(buildCreateVariationPayload({ ...formData, projectId })),
+      })
 
-      if (response.ok) {
-        const variation = await response.json();
-        window.location.href = `/variations/${variation.id}`;
-      } else {
-        alert('Failed to create variation');
+      if (!response.ok) {
+        throw new Error('Failed to create estimate')
       }
-    } catch (error) {
-      alert('Error creating variation');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
-  const updateCosts = (material: number, labor: number, gst: number, total: number) => {
-    setFormData(prev => ({
-      ...prev,
-      materialCost: material,
-      laborCost: labor,
-      gst,
-      totalCost: total
-    }));
-  };
+      const variation = await response.json()
+      router.push(`/variations/${variation.id}`)
+    } catch (error) {
+      console.error('Error creating estimate:', error)
+      alert('Failed to create estimate')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
-      <div className="max-w-md mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
-          Create Variation
-        </h1>
+
+      <div className="mx-auto max-w-3xl px-4 py-6">
+        <div className="mb-6">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-600">New Estimate</p>
+          <h1 className="text-3xl font-bold text-gray-900">Create a project variation</h1>
+          <p className="mt-2 max-w-2xl text-sm text-gray-600">
+            Select an existing client and project, or create them inline before saving the estimate.
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Job Details */}
-          <div className="bg-white rounded-lg p-4 shadow">
-            <h2 className="text-lg font-semibold mb-4">Job Details</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Job ID
-                </label>
+          <section className="rounded-xl bg-white p-4 shadow">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Client</h2>
+              <button
+                type="button"
+                onClick={() => setCreateClientInline((current) => !current)}
+                className="text-sm font-medium text-blue-600"
+              >
+                {createClientInline ? 'Use Existing Client' : 'Create New Client'}
+              </button>
+            </div>
+
+            {createClientInline ? (
+              <div className="grid gap-4 md:grid-cols-2">
                 <input
                   type="text"
-                  value={formData.jobId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, jobId: e.target.value }))}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter job ID"
+                  value={clientDraft.name}
+                  onChange={(event) => setClientDraft((current) => ({ ...current, name: event.target.value }))}
+                  className="form-input"
+                  placeholder="Client name"
                   required
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Client Email
-                </label>
                 <input
                   type="email"
-                  value={formData.clientEmail}
-                  onChange={(e) => setFormData(prev => ({ ...prev, clientEmail: e.target.value }))}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={clientDraft.email}
+                  onChange={(event) => setClientDraft((current) => ({ ...current, email: event.target.value }))}
+                  className="form-input"
                   placeholder="client@example.com"
                   required
                 />
+                <input
+                  type="tel"
+                  value={clientDraft.phone}
+                  onChange={(event) => setClientDraft((current) => ({ ...current, phone: event.target.value }))}
+                  className="form-input"
+                  placeholder="0412 345 678"
+                  required
+                />
+                <input
+                  type="text"
+                  value={clientDraft.company}
+                  onChange={(event) => setClientDraft((current) => ({ ...current, company: event.target.value }))}
+                  className="form-input"
+                  placeholder="Company (optional)"
+                />
               </div>
-            </div>
-          </div>
+            ) : (
+              <select
+                value={selectedClientId}
+                onChange={(event) => {
+                  setSelectedClientId(event.target.value)
+                  setSelectedProjectId('')
+                }}
+                className="form-input"
+                required
+              >
+                <option value="">Select client</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name} · {client.email}
+                  </option>
+                ))}
+              </select>
+            )}
+          </section>
 
-          {/* Variation Description */}
-          <div className="bg-white rounded-lg p-4 shadow">
-            <h2 className="text-lg font-semibold mb-4">Variation Details</h2>
-            
+          <section className="rounded-xl bg-white p-4 shadow">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Project</h2>
+              <button
+                type="button"
+                onClick={() => setCreateProjectInline((current) => !current)}
+                className="text-sm font-medium text-blue-600"
+              >
+                {createProjectInline ? 'Use Existing Project' : 'Create New Project'}
+              </button>
+            </div>
+
+            {createProjectInline ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <input
+                  type="text"
+                  value={projectDraft.code}
+                  onChange={(event) => setProjectDraft((current) => ({ ...current, code: event.target.value }))}
+                  className="form-input"
+                  placeholder="Project code"
+                  required
+                />
+                <input
+                  type="text"
+                  value={projectDraft.name}
+                  onChange={(event) => setProjectDraft((current) => ({ ...current, name: event.target.value }))}
+                  className="form-input"
+                  placeholder="Project name"
+                  required
+                />
+                <input
+                  type="text"
+                  value={projectDraft.address}
+                  onChange={(event) => setProjectDraft((current) => ({ ...current, address: event.target.value }))}
+                  className="form-input md:col-span-2"
+                  placeholder="Street address"
+                  required
+                />
+                <input
+                  type="text"
+                  value={projectDraft.suburb}
+                  onChange={(event) => setProjectDraft((current) => ({ ...current, suburb: event.target.value }))}
+                  className="form-input"
+                  placeholder="Suburb"
+                  required
+                />
+                <input
+                  type="text"
+                  value={projectDraft.state}
+                  onChange={(event) => setProjectDraft((current) => ({ ...current, state: event.target.value.toUpperCase() }))}
+                  className="form-input"
+                  placeholder="State"
+                  required
+                />
+                <input
+                  type="text"
+                  value={projectDraft.postcode}
+                  onChange={(event) => setProjectDraft((current) => ({ ...current, postcode: event.target.value }))}
+                  className="form-input"
+                  placeholder="Postcode"
+                  required
+                />
+              </div>
+            ) : (
+              <select
+                value={selectedProjectId}
+                onChange={(event) => setSelectedProjectId(event.target.value)}
+                className="form-input"
+                required
+                disabled={!selectedClientId}
+              >
+                <option value="">{selectedClientId ? 'Select project' : 'Select client first'}</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.code} · {project.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </section>
+
+          <section className="rounded-xl bg-white p-4 shadow">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">Scope & Measurements</h2>
+
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Describe the variation work"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Reason for Change
-                </label>
-                <select
-                  value={formData.reason}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Select reason</option>
-                  <option value="client-request">Client Request</option>
-                  <option value="site-conditions">Site Conditions</option>
-                  <option value="material-change">Material Change</option>
-                  <option value="scope-addition">Additional Scope</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Scope Change
-                </label>
-                <textarea
-                  value={formData.scopeChange}
-                  onChange={(e) => setFormData(prev => ({ ...prev, scopeChange: e.target.value }))}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={2}
-                  placeholder="What's changing from the original scope?"
-                  required
-                />
-              </div>
+              <textarea
+                value={formData.description}
+                onChange={(event) => setFormData((current) => ({ ...current, description: event.target.value }))}
+                className="form-input"
+                rows={4}
+                placeholder="Describe the additional scope and deliverables."
+                required
+              />
+              <textarea
+                value={formData.measurements}
+                onChange={(event) => setFormData((current) => ({ ...current, measurements: event.target.value }))}
+                className="form-input"
+                rows={4}
+                placeholder="Wall A: 3.4m&#10;Wall B: 2.8m&#10;Ceiling height: 2.7m"
+                required
+              />
+              <input
+                type="text"
+                value={formData.totalArea}
+                onChange={(event) => setFormData((current) => ({ ...current, totalArea: event.target.value }))}
+                className="form-input"
+                placeholder="24 sqm"
+                required
+              />
+              <textarea
+                value={formData.items}
+                onChange={(event) => setFormData((current) => ({ ...current, items: event.target.value }))}
+                className="form-input font-mono text-sm"
+                rows={6}
+                placeholder={'Cabinetry\t1\t2500.00\t2500.00\nStone\t1\t1800.00\t1800.00'}
+                required
+              />
+              <textarea
+                value={formData.notes}
+                onChange={(event) => setFormData((current) => ({ ...current, notes: event.target.value }))}
+                className="form-input"
+                rows={3}
+                placeholder="Internal or client-facing notes."
+              />
             </div>
-          </div>
+          </section>
 
-          {/* Photo Evidence */}
-          <PhotoUpload 
-            photos={formData.photos}
-            onPhotosChange={(photos) => setFormData(prev => ({ ...prev, photos }))}
+          <PhotoUpload
+            photos={formData.images}
+            onPhotosChange={(images) => setFormData((current) => ({ ...current, images }))}
           />
 
-          {/* Cost Calculator */}
           <CostCalculator onCostUpdate={updateCosts} />
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-          >
-            {isSubmitting ? 'Creating...' : 'Create Variation'}
+          <button type="submit" disabled={isSubmitting} className="btn-primary w-full justify-center">
+            {isSubmitting ? 'Creating Estimate...' : 'Create Estimate'}
           </button>
         </form>
       </div>
     </div>
-  );
+  )
 }

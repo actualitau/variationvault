@@ -1,202 +1,155 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Header } from '../../components/Header';
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { Header } from '../../components/Header'
+import { mapRelationVariationToSummary } from '@/lib/relations'
 
-interface Variation {
-  id: string;
-  jobId: string;
-  description: string;
-  totalCost: number;
-  status: string;
-  createdAt: string;
-  clientEmail: string;
-}
+type VariationSummary = ReturnType<typeof mapRelationVariationToSummary>
+
+const FILTERS = ['all', 'pending', 'approved', 'rejected', 'draft'] as const
 
 export default function VariationsPage() {
-  const [variations, setVariations] = useState<Variation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [variations, setVariations] = useState<VariationSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('all')
 
   useEffect(() => {
-    loadVariations();
-  }, []);
+    const loadVariations = async () => {
+      try {
+        const response = await fetch('/api/variations')
+        if (!response.ok) {
+          throw new Error('Failed to load variations')
+        }
 
-  const loadVariations = async () => {
-    try {
-      const response = await fetch('/api/variations');
-      if (response.ok) {
-        const data = await response.json();
-        setVariations(data);
+        const data = await response.json()
+        setVariations(data.map(mapRelationVariationToSummary))
+      } catch (error) {
+        console.error('Failed to load variations:', error)
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Failed to load variations:', error);
-    } finally {
-      setLoading(false);
     }
-  };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: 'AUD'
-    }).format(amount);
-  };
+    void loadVariations()
+  }, [])
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-AU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit'
-    });
-  };
+  const filteredVariations = variations.filter((variation) => {
+    if (filter === 'all') return true
+    if (filter === 'draft') return variation.status === 'DRAFT'
+    return variation.approvalStatus.toLowerCase() === filter
+  })
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const filteredVariations = variations.filter(variation => {
-    if (filter === 'all') return true;
-    return variation.status.toLowerCase() === filter;
-  });
+  const approvedValue = variations
+    .filter((variation) => variation.approvalStatus === 'APPROVED')
+    .reduce((sum, variation) => sum + variation.total, 0)
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="max-w-md mx-auto px-4 py-8">
-          <div className="text-center">Loading variations...</div>
+        <div className="mx-auto max-w-4xl px-4 py-10">
+          <div className="text-center text-gray-600">Loading estimates...</div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
-      <div className="max-w-md mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Variations</h1>
-          <Link 
-            href="/variations/new"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors"
-          >
-            New
+
+      <div className="mx-auto max-w-4xl px-4 py-6">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-600">Pipeline</p>
+            <h1 className="text-3xl font-bold text-gray-900">Project estimates</h1>
+            <p className="mt-2 text-sm text-gray-600">Track drafted, sent, and client-approved variation estimates.</p>
+          </div>
+
+          <Link href="/variations/new" className="btn-primary justify-center">
+            Create Estimate
           </Link>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex space-x-1 mb-6 bg-gray-200 rounded-lg p-1">
-          {[
-            { key: 'all', label: 'All' },
-            { key: 'pending', label: 'Pending' },
-            { key: 'approved', label: 'Approved' },
-            { key: 'rejected', label: 'Rejected' }
-          ].map((tab) => (
+        <div className="mb-6 grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl bg-white p-4 shadow">
+            <div className="text-sm text-gray-500">Total estimates</div>
+            <div className="mt-2 text-3xl font-bold text-gray-900">{variations.length}</div>
+          </div>
+          <div className="rounded-xl bg-white p-4 shadow">
+            <div className="text-sm text-gray-500">Approved</div>
+            <div className="mt-2 text-3xl font-bold text-green-600">
+              {variations.filter((variation) => variation.approvalStatus === 'APPROVED').length}
+            </div>
+          </div>
+          <div className="rounded-xl bg-white p-4 shadow">
+            <div className="text-sm text-gray-500">Approved value</div>
+            <div className="mt-2 text-3xl font-bold text-blue-600">
+              {new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(approvedValue)}
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6 flex flex-wrap gap-2 rounded-xl bg-slate-100 p-2">
+          {FILTERS.map((tab) => (
             <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key)}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                filter === tab.key
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+              key={tab}
+              type="button"
+              onClick={() => setFilter(tab)}
+              className={`rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors ${
+                filter === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {tab.label}
+              {tab.replace('_', ' ')}
             </button>
           ))}
         </div>
 
-        {/* Variations List */}
         <div className="space-y-4">
           {filteredVariations.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-gray-500 mb-4">No variations found</div>
-              <Link 
-                href="/variations/new"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-              >
-                Create First Variation
-              </Link>
+            <div className="rounded-xl bg-white p-8 text-center shadow">
+              <div className="text-gray-500">No estimates match this filter.</div>
             </div>
           ) : (
             filteredVariations.map((variation) => (
               <Link
                 key={variation.id}
                 href={`/variations/${variation.id}`}
-                className="block bg-white rounded-lg p-4 shadow hover:shadow-md transition-shadow"
+                className="block rounded-xl bg-white p-5 shadow transition-shadow hover:shadow-md"
               >
-                <div className="flex justify-between items-start mb-2">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <div className="font-semibold text-gray-900">
-                      Job {variation.jobId}
+                    <div className="text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
+                      {variation.projectCode}
                     </div>
-                    <div className="text-sm text-gray-600">
-                      {variation.description.length > 50
-                        ? `${variation.description.substring(0, 50)}...`
-                        : variation.description}
-                    </div>
+                    <h2 className="mt-1 text-xl font-semibold text-gray-900">{variation.projectName}</h2>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {variation.clientName} • {variation.clientEmail}
+                    </p>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(variation.status)}`}>
-                    {variation.status}
-                  </span>
+
+                  <div className="flex flex-wrap gap-2 md:justify-end">
+                    <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                      {variation.status}
+                    </span>
+                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                      {variation.approvalStatus.replace('_', ' ')}
+                    </span>
+                  </div>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <div className="text-lg font-bold text-blue-600">
-                    {formatCurrency(variation.totalCost)}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {formatDate(variation.createdAt)}
-                  </div>
+
+                <div className="mt-4 flex flex-col gap-2 text-sm text-gray-600 md:flex-row md:items-center md:justify-between">
+                  <span>{new Date(variation.createdAt).toLocaleDateString('en-AU')}</span>
+                  <span className="text-xl font-bold text-blue-600">
+                    {new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(variation.total)}
+                  </span>
                 </div>
               </Link>
             ))
           )}
         </div>
-
-        {/* Summary Stats */}
-        {variations.length > 0 && (
-          <div className="mt-8 bg-white rounded-lg p-4 shadow">
-            <h3 className="font-semibold text-gray-900 mb-3">Summary</h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {variations.length}
-                </div>
-                <div className="text-sm text-gray-600">Total</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-green-600">
-                  {variations.filter(v => v.status.toLowerCase() === 'approved').length}
-                </div>
-                <div className="text-sm text-gray-600">Approved</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-orange-600">
-                  {formatCurrency(
-                    variations
-                      .filter(v => v.status.toLowerCase() === 'approved')
-                      .reduce((sum, v) => sum + v.totalCost, 0)
-                  )}
-                </div>
-                <div className="text-sm text-gray-600">Value</div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
-  );
+  )
 }
