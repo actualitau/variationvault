@@ -44,7 +44,7 @@ export default function VariationDetailPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="mx-auto max-w-4xl px-4 py-10 text-center text-gray-600">Loading estimate...</div>
+        <div className="mx-auto max-w-4xl px-4 py-10 text-center text-gray-600">Loading variation...</div>
       </div>
     )
   }
@@ -54,9 +54,9 @@ export default function VariationDetailPage() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="mx-auto max-w-4xl px-4 py-10 text-center">
-          <div className="text-gray-500">Estimate not found.</div>
+          <div className="text-gray-500">Variation not found.</div>
           <Link href="/variations" className="mt-4 inline-flex text-blue-600 hover:text-blue-800">
-            Back to estimates
+            Back to variations
           </Link>
         </div>
       </div>
@@ -127,7 +127,7 @@ export default function VariationDetailPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Evidence</h2>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {images.map((image, index) => (
-                    <img key={`${image}-${index}`} src={image} alt={`Estimate evidence ${index + 1}`} className="h-40 w-full rounded-xl object-cover" />
+                    <img key={`${image}-${index}`} src={image} alt={`Variation evidence ${index + 1}`} className="h-40 w-full rounded-xl object-cover" />
                   ))}
                 </div>
               </section>
@@ -195,7 +195,7 @@ export default function VariationDetailPage() {
                   Open Approval View
                 </Link>
                 <Link href="/variations" className="btn-secondary w-full justify-center">
-                  Back to Estimates
+                  Back to Variations
                 </Link>
               </div>
             </section>

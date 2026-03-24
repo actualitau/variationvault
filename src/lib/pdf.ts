@@ -38,7 +38,7 @@ export function generatePDF(variation: PdfVariation): ArrayBuffer {
   
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
-  doc.text(`Estimate #${variation.id.slice(-8).toUpperCase()}`, 20, 30)
+  doc.text(`Variation #${variation.id.slice(-8).toUpperCase()}`, 20, 30)
   doc.text(new Date(variation.updatedAt).toLocaleDateString('en-AU'), pageWidth - 20, 30, { align: 'right' })
   
   // Reset text color

@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(Buffer.from(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="estimate.pdf"',
+        'Content-Disposition': 'attachment; filename="variation.pdf"',
         'Cache-Control': 'no-cache',
       },
     })

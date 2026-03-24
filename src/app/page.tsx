@@ -11,7 +11,7 @@ export default function HomePage() {
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.24em] text-blue-600">VariationVault</p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900 md:text-5xl">
-              Estimate, approve, and document variation work without losing context.
+              Create, approve, and document job variations without losing context.
             </h1>
             <p className="mt-4 max-w-2xl text-base text-slate-600">
               VariationVault captures project scope, client details, evidence images, pricing, and approvals in one
@@ -20,7 +20,7 @@ export default function HomePage() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/variations/new" className="btn-primary justify-center">
-                Create Estimate
+                Create Variation
               </Link>
               <Link href="/variations" className="btn-secondary justify-center">
                 View Pipeline
@@ -41,7 +41,7 @@ export default function HomePage() {
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl bg-slate-900 p-4 text-white shadow">
                 <div className="text-2xl font-bold">&lt;60s</div>
-                <div className="mt-1 text-sm text-slate-300">Estimate creation</div>
+                <div className="mt-1 text-sm text-slate-300">Variation creation</div>
               </div>
               <div className="rounded-2xl bg-emerald-600 p-4 text-white shadow">
                 <div className="text-2xl font-bold">Client</div>

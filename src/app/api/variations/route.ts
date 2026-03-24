@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         create: {
           version: 1,
           images,
-          changes: 'Initial estimate created',
+          changes: 'Initial variation created',
         },
       },
     } as Prisma.VariationUncheckedCreateInput

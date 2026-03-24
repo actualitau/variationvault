@@ -74,11 +74,11 @@ export default function ApprovalPage() {
   }
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-600">Loading estimate...</div>
+    return <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-600">Loading variation...</div>
   }
 
   if (!variation) {
-    return <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-600">Estimate not found.</div>
+    return <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-600">Variation not found.</div>
   }
 
   if (submittedStatus) {
@@ -86,7 +86,7 @@ export default function ApprovalPage() {
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
         <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow">
           <h1 className="text-2xl font-bold text-slate-900">
-            {submittedStatus === 'APPROVED' ? 'Estimate approved' : 'Response received'}
+            {submittedStatus === 'APPROVED' ? 'Variation approved' : 'Response received'}
           </h1>
           <p className="mt-2 text-gray-600">Your decision has been recorded and the contractor has been notified.</p>
         </div>
@@ -100,7 +100,7 @@ export default function ApprovalPage() {
         <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow">
           <h1 className="text-2xl font-bold text-slate-900">Already processed</h1>
           <p className="mt-2 text-gray-600">
-            This estimate has already been marked as {variation.approvalStatus.replace('_', ' ').toLowerCase()}.
+            This variation has already been marked as {variation.approvalStatus.replace('_', ' ').toLowerCase()}.
           </p>
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function ApprovalPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-slate-900 text-white shadow-sm">
         <div className="mx-auto max-w-3xl px-4 py-4 text-center">
-          <h1 className="text-xl font-bold">Estimate Approval</h1>
+          <h1 className="text-xl font-bold">Variation Approval</h1>
         </div>
       </div>
 
@@ -140,7 +140,7 @@ export default function ApprovalPage() {
           ) : null}
 
           <section className="rounded-xl bg-white p-5 shadow">
-            <h3 className="text-lg font-semibold text-slate-900">Estimate Total</h3>
+            <h3 className="text-lg font-semibold text-slate-900">Variation Total</h3>
             <div className="mt-4 space-y-3">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Labor</span>

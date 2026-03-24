@@ -49,7 +49,7 @@ export default function VariationsPage() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="mx-auto max-w-4xl px-4 py-10">
-          <div className="text-center text-gray-600">Loading estimates...</div>
+          <div className="text-center text-gray-600">Loading variations...</div>
         </div>
       </div>
     )
@@ -63,18 +63,18 @@ export default function VariationsPage() {
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-600">Pipeline</p>
-            <h1 className="text-3xl font-bold text-gray-900">Project estimates</h1>
-            <p className="mt-2 text-sm text-gray-600">Track drafted, sent, and client-approved variation estimates.</p>
+            <h1 className="text-3xl font-bold text-gray-900">Job variations</h1>
+            <p className="mt-2 text-sm text-gray-600">Track drafted, sent, and client-approved variations across your projects.</p>
           </div>
 
           <Link href="/variations/new" className="btn-primary justify-center">
-            Create Estimate
+            Create Variation
           </Link>
         </div>
 
         <div className="mb-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-xl bg-white p-4 shadow">
-            <div className="text-sm text-gray-500">Total estimates</div>
+            <div className="text-sm text-gray-500">Total variations</div>
             <div className="mt-2 text-3xl font-bold text-gray-900">{variations.length}</div>
           </div>
           <div className="rounded-xl bg-white p-4 shadow">
@@ -109,7 +109,7 @@ export default function VariationsPage() {
         <div className="space-y-4">
           {filteredVariations.length === 0 ? (
             <div className="rounded-xl bg-white p-8 text-center shadow">
-              <div className="text-gray-500">No estimates match this filter.</div>
+              <div className="text-gray-500">No variations match this filter.</div>
             </div>
           ) : (
             filteredVariations.map((variation) => (

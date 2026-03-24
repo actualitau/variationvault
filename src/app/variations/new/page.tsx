@@ -168,14 +168,14 @@ export default function NewVariationPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create estimate')
+        throw new Error('Failed to create variation')
       }
 
       const variation = await response.json()
       router.push(`/variations/${variation.id}`)
     } catch (error) {
-      console.error('Error creating estimate:', error)
-      alert('Failed to create estimate')
+      console.error('Error creating variation:', error)
+      alert('Failed to create variation')
     } finally {
       setIsSubmitting(false)
     }
@@ -187,10 +187,10 @@ export default function NewVariationPage() {
 
       <div className="mx-auto max-w-3xl px-4 py-6">
         <div className="mb-6">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-600">New Estimate</p>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-600">New Variation</p>
           <h1 className="text-3xl font-bold text-gray-900">Create a project variation</h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-600">
-            Select an existing client and project, or create them inline before saving the estimate.
+            Select an existing client and project, or create them inline before saving the variation.
           </p>
         </div>
 
@@ -396,7 +396,7 @@ export default function NewVariationPage() {
           <CostCalculator onCostUpdate={updateCosts} />
 
           <button type="submit" disabled={isSubmitting} className="btn-primary w-full justify-center">
-            {isSubmitting ? 'Creating Estimate...' : 'Create Estimate'}
+            {isSubmitting ? 'Creating Variation...' : 'Create Variation'}
           </button>
         </form>
       </div>

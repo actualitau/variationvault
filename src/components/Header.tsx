@@ -17,7 +17,7 @@ export const Header = () => {
           </div>
           <div>
             <div className="text-lg font-bold">VariationVault</div>
-            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Project Estimates</div>
+            <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Job Variations</div>
           </div>
         </Link>
 
@@ -26,7 +26,7 @@ export const Header = () => {
             Pipeline
           </Link>
           <Link href="/variations/new" className="text-sm text-slate-200 transition hover:text-white">
-            New Estimate
+            New Variation
           </Link>
         </nav>
 

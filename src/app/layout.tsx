@@ -51,9 +51,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="VariationVault" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#2563eb" />
-        {process.env.NODE_ENV !== 'production' ? (
+        {(
           <script dangerouslySetInnerHTML={{ __html: unregisterServiceWorkerInDev }} />
-        ) : null}
+        )}
       </head>
       <body className="antialiased">
         <div className="min-h-screen bg-gray-50">

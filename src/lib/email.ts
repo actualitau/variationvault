@@ -17,10 +17,10 @@ export async function sendApprovalEmail(
   const message = `
 Hello ${variation.clientName},
 
-Your estimate for "${variation.projectName}" has been ${actionLabel}.
+Your variation for "${variation.projectName}" has been ${actionLabel}.
 
 ${comments ? `Comments: ${comments}\n\n` : ''}
-View the full estimate: https://variationvault.com/estimates/${variation.id}
+View the full variation: https://variationvault.com/variations/${variation.id}
 
 Best regards,
 VariationVault
